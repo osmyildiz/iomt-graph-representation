@@ -10,7 +10,7 @@
 
 ## Abstract
 
-Graph neural networks have been increasingly explored for network intrusion detection, yet the effect of graph construction strategy on detection performance remains underexamined — particularly for IoMT networks. In this study, we systematically investigate how data representation, graph construction, evaluation protocol, and task formulation shape the effectiveness of graph-based intrusion detection on the CICIoMT2024 benchmark. We compare three representation strategies: flow-level tabular features, feature-similarity graphs, and PCAP-derived communication-topology graphs constructed from raw packet captures. We further examine the effect of domain-typed edge augmentation, PCAP-level validation protocols, and task decomposition into topology-heavy and protocol-heavy attack categories. Our experiments reveal several findings that challenge common assumptions. First, feature-similarity graphs do not provide GNNs with a reliable advantage over Random Forest baselines. Second, PCAP-derived communication topology yields a more meaningful relational representation, enabling GNNs to become competitive in topology-heavy attack detection. Third, domain-aware edge typing improves both performance and stability. Fourth, under proper PCAP-level validation with session-aware splits, previously reported gains diminish substantially, underscoring the importance of evaluation protocol. Fifth, in our experiments on this dataset, GNN effectiveness depends on attack category: topology-heavy attacks (DDoS, DoS, Recon) benefit from graph modeling, while protocol-heavy attacks (MQTT, Spoofing) do not. Across five random seeds, a domain-typed Adaptive Edge-Weighted GAT achieves a macro-F1 of 0.800 ± 0.026 on the topology-heavy subset, compared with 0.784 ± 0.020 for Random Forest. These results suggest that in IoMT intrusion detection, representation choice and evaluation protocol matter more than architectural complexity.
+Graph neural networks have been increasingly explored for network intrusion detection, yet the effect of graph construction strategy on detection performance remains underexamined — particularly for IoMT networks. In this study, we systematically investigate how data representation, graph construction, evaluation protocol, and task formulation shape the effectiveness of graph-based intrusion detection on the CICIoMT2024 benchmark. We compare three representation strategies: flow-level tabular features, feature-similarity graphs, and PCAP-derived communication-topology graphs constructed from raw packet captures. We further examine the effect of domain-typed edge augmentation, PCAP-level validation protocols, and task decomposition into topology-heavy and protocol-heavy attack categories. Our results show that feature-similarity graphs provide no reliable advantage over Random Forest baselines, whereas PCAP-derived communication topology enables GNNs to become competitive on topology-heavy attacks. Third, domain-aware edge typing improves both performance and stability. Fourth, under proper PCAP-level validation with session-aware splits, previously reported gains diminish substantially, underscoring the importance of evaluation protocol. Fifth, in our experiments on this dataset, GNN effectiveness depends on attack category: topology-heavy attacks (DDoS, DoS, Recon) benefit from graph modeling, while protocol-heavy attacks (MQTT, Spoofing) do not. Across five random seeds, a domain-typed Adaptive Edge-Weighted GAT achieves a macro-F1 of 0.800 ± 0.026 on the topology-heavy subset, compared with 0.784 ± 0.020 for Random Forest. These results suggest that in IoMT intrusion detection, representation choice and evaluation protocol matter more than architectural complexity.
 
 **Keywords:** Internet of Medical Things; intrusion detection system; graph neural network; graph construction; communication topology; evaluation protocol; CICIoMT2024
 
@@ -30,7 +30,7 @@ This question turns out to matter more than we initially expected. Our investiga
 
 When we reconstructed the communication topology from the raw PCAP files — IPs as nodes, aggregated flows as edges, in 60-second windows — the graph models became substantially more competitive. Adding domain-typed edges (same-subnet, gateway-linked) further improved both performance and stability, consistent with findings that domain-aware graph construction matters in GNN-based IDS [7,8].
 
-But the investigation also revealed uncomfortable findings. When we replaced naive evaluation with proper PCAP-level session-aware validation, previously encouraging margins shrank. In the full 6-class setting, our best GNN model did not consistently outperform Random Forest. It was only when we separated topology-heavy attacks (DDoS, DoS, Recon) from protocol-heavy attacks (MQTT, Spoofing) that GNNs showed a clearer and more stable advantage. Additional architectural complexity did not yield consistent gains over a simpler adaptive baseline.
+However, under PCAP-level session-aware validation, the performance gains observed with naive splits diminished substantially. In the full 6-class setting, our best GNN model did not consistently outperform Random Forest. It was only when we separated topology-heavy attacks (DDoS, DoS, Recon) from protocol-heavy attacks (MQTT, Spoofing) that GNNs showed a clearer and more stable advantage. Additional architectural complexity did not yield consistent gains over a simpler adaptive baseline.
 
 Taken together, the experiments suggest that in IoMT intrusion detection on CICIoMT2024, the primary factors shaping graph-based detection performance are data representation, evaluation protocol, and task formulation — not architectural complexity. The specific contributions of this paper are:
 
@@ -132,7 +132,7 @@ Table 2 shows the resulting graph distribution.
 
 ### 3.3. Domain-Typed Edge Augmentation
 
-Communication-topology graphs capture who communicates with whom, but not the semantic type of the relationship. We augment the base communication edges with two domain-informed edge types:
+While communication edges represent observed traffic, they do not explicitly encode network infrastructure constraints. We augment these with two domain-informed edge types to provide the model with a static network-locality prior:
 
 *Same-subnet edges.* Internal IP addresses sharing the same /24 subnet prefix that do not already have a direct communication edge are connected. These edges provide a coarse network-locality prior.
 
@@ -160,7 +160,7 @@ Evaluation protocol is a central concern of this paper. We use two protocols to 
 
 *Naive protocol.* Early stopping is based on test set macro-F1. This is methodologically incorrect — the test set influences model selection — but is reported only as an illustrative comparison and not used for final model selection claims.
 
-*Proper protocol.* We reserve 15% of training graphs as a validation set using PCAP-level stratified sampling: all graphs from the same source PCAP file are assigned to the same split, preventing session-level leakage. For classes with two or fewer source PCAPs (MQTT, Spoofing, Benign in some configurations), all graphs remain in the training set and the class is absent from validation; this is noted where applicable. Early stopping with patience of 40 epochs is based on validation macro-F1. The best checkpoint is evaluated on the held-out test set. Feature scalers are fit on the training subset only. All experiments under proper protocol are repeated across five random seeds (42, 123, 456, 789, 2026), and we report mean ± standard deviation.
+*Session-aware protocol.* To reduce evaluation bias from session-level leakage, we implement a PCAP-level stratified split. We reserve 15% of training graphs as a validation set: all graphs derived from a single packet capture file are assigned to the same partition (train, validation, or test), ensuring evaluation on unseen attack sessions. For classes with two or fewer source PCAPs (MQTT, Spoofing, Benign in some configurations), all graphs remain in the training set and the class is absent from validation; this is noted where applicable. Early stopping with patience of 40 epochs is based on validation macro-F1. The best checkpoint is evaluated on the held-out test set. Feature scalers are fit on the training subset only. All experiments under this protocol are repeated across five random seeds (42, 123, 456, 789, 2026), and we report mean ± standard deviation.
 
 ### 3.6. Task Formulations
 
@@ -181,6 +181,8 @@ For each graph formulation, we compare:
 - **PureGAT.** GAT with edge feature injection but no adaptive edge weighting.
 
 For flow-level and feature-similarity experiments, the corresponding window-level RF baseline is used. All graph baselines use the same node features, graph splits, and evaluation protocol unless otherwise noted.
+
+The source code for all experiments, including graph construction, model implementations, and evaluation scripts, is publicly available at https://github.com/osmyildiz/iomt-graph-representation.
 
 ---
 
@@ -227,9 +229,9 @@ On feature-similarity graphs, no GNN model outperforms the window-level RF in ac
 | PureGAT | 0.850 ± 0.011 | 0.650 ± 0.072 |
 | AdaptiveGAT | 0.875 ± 0.017 | 0.691 ± 0.060 |
 
-On communication-topology graphs with proper validation, the margins are much smaller. AdaptiveGAT is competitive with RF (0.691 vs 0.701 in macro-F1) where feature-similarity GNNs were not. The variance across seeds is notable, particularly for GraphSAGE and PureGAT. AdaptiveGAT shows the lowest variance among GNN models.
+On communication-topology graphs with session-aware validation, the margins are much smaller. AdaptiveGAT is competitive with RF (0.691 vs 0.701 in macro-F1) where feature-similarity GNNs were not. The variance across seeds is notable, particularly for GraphSAGE and PureGAT. AdaptiveGAT shows the lowest variance among GNN models.
 
-The point is not a direct numerical comparison between Tables 4a and 4b, but the qualitative shift: under feature-similarity construction, GNNs cannot match RF; under communication-topology construction, they become competitive. What changed is the information available to the model, not the model itself.
+Tables 4a and 4b show that GNN performance is highly sensitive to graph construction. While GNNs do not outperform Random Forest on feature-similarity graphs, the PCAP-derived communication topology reduces this gap and makes AdaptiveGAT competitive with the RF baseline under session-aware validation.
 
 ### 4.3. Effect of Domain-Typed Edges
 
@@ -283,7 +285,7 @@ Motivated by the per-class analysis above, we evaluate the same models on a topo
 | DoS | 0.670 ± 0.041 | 0.772 ± 0.033 |
 | Recon | 0.739 ± 0.038 | 0.668 ± 0.066 |
 
-In the 4-class setting, AdaptiveGAT outperforms RF in overall macro-F1 (0.800 vs 0.784). The advantage is clearest for DoS (+10.2 percentage points) and DDoS (+3.6 points). RF retains an advantage on Recon (0.739 vs 0.668), which has only 46 training graphs and may not provide sufficient data for GNN generalization. The GNN advantage, while present, is modest and should be interpreted in light of the variance.
+In the 4-class setting, AdaptiveGAT achieves a macro-F1 of 0.800 compared to 0.784 for Random Forest. The advantage is clearest for DoS (+10.2 percentage points) and DDoS (+3.6 points). RF retains an advantage on Recon (0.739 vs 0.668), which has only 46 training graphs and may not provide sufficient data for GNN generalization. While this confirms a performance gain for topology-heavy attacks, the margin remains modest and should be considered alongside the observed variance across seeds.
 
 ### 4.6. Binary Detection
 
@@ -302,7 +304,7 @@ Both models perform well. AdaptiveGAT slightly outperforms RF across seeds. This
 
 We explored several architectural extensions beyond AdaptiveGAT under proper protocol: neuro-symbolic fusion with explicit IF-THEN rules and class-aware gates, node-role auxiliary supervision with pseudo-labeled victim/scanner/broker roles, and motif-aware detection heads with topology-grounded pattern scoring. In each case, the extension failed to consistently outperform the AdaptiveGAT baseline across seeds. Detailed results from these exploratory experiments are included in the Supplementary Materials.
 
-We report this as a meaningful negative finding. These results suggest that, in this setting, representation appears to be the more limiting factor than additional architectural complexity.
+These architectural extensions failed to consistently outperform the AdaptiveGAT baseline, suggesting that representation is a more limiting factor than added model complexity in this setting.
 
 ### 4.8. Summary of Results
 
@@ -314,21 +316,21 @@ Across all experiments, three factors consistently shaped the results more than 
 
 ### 5.1. When Do Graph Models Help?
 
-The results paint a nuanced picture. Graph-based models do not universally outperform tabular baselines on CICIoMT2024. Under proper evaluation, the overall 6-class macro-F1 of AdaptiveGAT (0.691) is comparable to but does not clearly exceed that of Random Forest (0.701). The advantage of graph models is selective and conditional.
+The full 6-class results do not support a uniform advantage for graph models over tabular baselines on CICIoMT2024. Under session-aware evaluation, the AdaptiveGAT macro-F1 (0.691) is comparable to the Random Forest baseline (0.701). The advantage of graph models is selective and conditional.
 
-Graph models are more competitive when three conditions are met. First, the graph must carry meaningful relational structure — communication-topology graphs derived from PCAP files satisfy this, while feature-similarity graphs do not. Second, domain-typed edges that encode network infrastructure relationships (subnet membership, gateway connectivity) improve both performance and stability. Third, the classification task must align with the relational inductive bias: topology-heavy attacks like DDoS (fan-in) and DoS show the clearest GNN advantage, while protocol-heavy attacks like MQTT do not benefit.
+Graph models are more competitive when three conditions are met. First, the graph must carry meaningful relational structure — communication-topology graphs derived from PCAP files satisfy this, while feature-similarity graphs do not. Second, domain-typed edges that encode network infrastructure constraints (subnet membership, gateway connectivity) improve both performance and stability. Third, the classification task must align with the graph structure: topology-heavy attacks like DDoS (fan-in) and DoS show the clearest GNN advantage, while protocol-heavy attacks like MQTT do not benefit.
 
-This selectivity is informative rather than discouraging. It suggests that graph models for IoMT IDS should not be applied as a universal replacement for tabular classifiers, but rather deployed where their structural bias matches the attack signature. A practical IoMT IDS might use a tabular classifier as a fast first-stage detector and reserve graph-based analysis for cases where topological context is expected to be informative.
+This performance pattern suggests that GNN effectiveness is task-dependent. Graph models are more competitive when the attack signature is strongly reflected in network structure, as in DDoS and some DoS scenarios, but provide less benefit for protocol-heavy attacks. Our results suggest that a hybrid detection strategy — using tabular models for protocol-level or low-support categories and graph models for topology-sensitive attacks — may be more robust than a single universal classifier in IoMT settings.
 
 ### 5.2. Representation vs Architecture
 
 Across our experiments, changes to data representation produced larger and more consistent performance shifts than changes to model architecture. Moving from feature-similarity to communication-topology graphs changed the competitive position of GNNs relative to RF. Adding domain-typed edges improved macro-F1 by 7.4 percentage points while reducing variance by a factor of four. In contrast, four separate architectural extensions — neuro-symbolic fusion, class-aware rule fusion, motif-aware heads, and node-role auxiliary supervision — each failed to outperform the simpler AdaptiveGAT under proper evaluation.
 
-This finding has practical implications. Researchers working on GNN-based IDS may benefit more from investing in graph construction and relation design than from developing increasingly complex attention mechanisms or auxiliary objectives. The bottleneck, at least on CICIoMT2024, appears to be in what information reaches the model rather than how the model processes it.
+The failure of the architectural extensions to outperform AdaptiveGAT suggests that representation is a more limiting factor than added model complexity in this setting. These results indicate that optimizing graph construction and relation design may yield more consistent gains than increasing architectural depth or adding auxiliary objectives. The bottleneck, at least on CICIoMT2024, appears to be in what information reaches the model rather than how the model processes it.
 
 ### 5.3. The Evaluation Protocol Problem
 
-The difference between naive and proper evaluation protocol was the single largest factor in our experiments — larger than any representation or architecture change. Under naive test-based early stopping, AdaptiveGAT achieved 0.852 macro-F1. Under proper PCAP-level validation, the same architecture achieved 0.691. This 16-point gap is not a modeling result; it is an evaluation artifact.
+The difference between naive and proper evaluation protocol was the single largest factor in our experiments — larger than any representation or architecture change. Under naive test-based early stopping, AdaptiveGAT achieved 0.852 macro-F1. Under proper PCAP-level validation, the same architecture achieved 0.691. The 16.1-point difference in macro-F1 between naive and session-aware evaluation shows that evaluation design can dominate apparent modeling gains. This gap suggests that session-level leakage can substantially inflate reported performance on CICIoMT2024.
 
 This finding highlights the need for clearer evaluation protocol reporting in the CICIoMT2024 literature, where very high accuracy figures are commonly reported but evaluation protocols are not always described in detail. Our results suggest that session-level data leakage — where graphs from the same attack session appear in both training and evaluation — can substantially inflate reported performance. We suggest that future work on this dataset explicitly describe split construction at the PCAP or session level and report validation-based model selection.
 
@@ -336,7 +338,7 @@ This finding highlights the need for clearer evaluation protocol reporting in th
 
 Our findings suggest several design considerations for IoMT intrusion detection systems intended for real-world deployment.
 
-First, raw PCAP access matters. The communication topology extracted from packet captures provides information that pre-extracted CSV features do not — endpoint identity, flow directionality, and network structure. Systems that can process raw traffic, even in aggregated form, have access to richer signals.
+First, incorporating communication topology from raw packet captures provides endpoint identity and flow directionality signals that are absent in pre-extracted flow features.
 
 Second, task decomposition may be more effective than a single universal classifier. Topology-heavy attacks (DDoS, DoS, Recon) and protocol-heavy attacks (MQTT, Spoofing) respond differently to graph-based modeling. A hybrid architecture — with a tabular first stage and a graph-based second stage for topology-sensitive cases — may be more robust than either approach alone.
 
@@ -355,6 +357,20 @@ Several limitations should be noted. First, MQTT and Spoofing have very small su
 This study investigated how data representation, graph construction, and evaluation protocol shape graph-based intrusion detection on CICIoMT2024. Three findings stand out. First, representation choice matters more than model architecture: PCAP-derived communication-topology graphs with domain-typed edges made GNNs competitive where feature-similarity graphs did not. Second, evaluation protocol is the single largest factor — proper PCAP-level validation reduced reported macro-F1 by over 16 percentage points compared to naive early stopping. Third, GNN effectiveness is attack-category dependent: topology-heavy attacks benefit from graph modeling, while protocol-heavy and low-support attacks do not.
 
 These findings suggest that IoMT IDS research should prioritize proper evaluation and representation design before pursuing architectural complexity. Future work will validate these results on a physical IoMT testbed and explore temporal graph evolution and protocol-aware representations for non-topology-heavy attack categories.
+
+---
+
+**Author Contributions:** Conceptualization, O.Y. and A.S.; methodology, O.Y.; software, O.Y.; validation, O.Y.; formal analysis, O.Y.; investigation, O.Y.; resources, A.S.; data curation, O.Y.; writing—original draft preparation, O.Y.; writing—review and editing, A.S.; visualization, O.Y.; supervision, A.S.; project administration, A.S. All authors have read and agreed to the published version of the manuscript.
+
+**Funding:** This research received no external funding.
+
+**Institutional Review Board Statement:** Not applicable.
+
+**Informed Consent Statement:** Not applicable.
+
+**Data Availability Statement:** The CICIoMT2024 dataset is publicly available at https://www.unb.ca/cic/datasets/iomt-dataset-2024.html. The code and experimental pipeline developed in this study are available at https://github.com/osmyildiz/iomt-graph-representation.
+
+**Conflicts of Interest:** The authors declare no conflicts of interest.
 
 ---
 
