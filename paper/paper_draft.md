@@ -82,14 +82,14 @@ CICIoMT2024 [3] was collected from a testbed of 40 IoMT devices — 25 physical 
 
 | Class | Train Flows | Test Flows | Percentage |
 |-------|------------|------------|------------|
-| Benign | 230,127 | 41,809 | 2.62% |
-| DDoS | 6,092,247 | 1,413,732 | 69.49% |
-| DoS | 2,289,186 | 515,634 | 26.11% |
+| Benign | 230,127 | 41,809 | 2.52% |
+| DDoS | 6,092,247 | 1,413,732 | 69.67% |
+| DoS | 2,289,186 | 515,634 | 26.03% |
 | Recon | 131,596 | 29,651 | 1.50% |
 | Spoofing | 17,525 | 3,944 | 0.20% |
 | MQTT | 7,013 | 1,580 | 0.08% |
 
-DDoS and DoS together account for over 95% of all flows. MQTT constitutes less than 0.1%. This imbalance means that overall accuracy is dominated by majority classes and provides limited information about detection quality for rarer attack types.
+The dataset contains 10,774,044 flows in total (8,767,694 train, 2,006,350 test). DDoS and DoS together account for 95.7% of all flows. MQTT constitutes less than 0.1%. This imbalance means that overall accuracy is dominated by majority classes and provides limited information about detection quality for rarer attack types.
 
 The dataset is distributed in two forms. The CSV files contain 45 pre-extracted flow-level features (packet counts, flag statistics, inter-arrival times, byte distributions) but no endpoint identifiers — no source or destination IP, no port numbers. The PCAP files contain raw packet captures with full header information. In this study, we use the CSV files for the feature-similarity baseline and the PCAP files for communication-topology reconstruction.
 
